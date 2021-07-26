@@ -1,0 +1,51 @@
+Config { font = "xft:jetbrainsmono:weight=bold:pixelsize=10:antialias=true:hinting=true"
+       , additionalFonts = ["xft:MaterialIcons:style=regular:pixelsize=13",
+                            "xft:FontAwesome:style=regular:pixelsize=13" 
+                           ,"xft:JetBrainsMono Nerd Font:weight=bold:pixelsize=19:antialias=true:hinting=true"
+                           ]
+       , borderColor = "orange"
+       , border =  BottomB 3
+       , bgColor = "black"
+       , fgColor = "grey"
+       , alpha = 200
+       , position = Static {xpos=0, ypos=0, width = 1366, height=20}
+       , textOffset = -1
+       , iconOffset = -1
+       , lowerOnStart = True
+       , pickBroadest = False
+       , persistent = False
+       , hideOnStart = False
+       , iconRoot = "."
+       , allDesktops = True
+       , overrideRedirect = True
+       , commands = [ Run Weather "MNMG" ["-t","<station>: <tempC>C",
+                                          "-L","27","-H","33",
+                                          "--normal","yellow",
+                                          "--high","red",
+                                          "--low","lightblue"] 36000
+
+                    , Run Network "eno1" ["-L","0","-H","2000",
+                                          "--low", "green", "--normal","yellow","--high","red"
+                                          ,"-t","<fn=2>\xf0ab</fn> <rx>|<tx> <fn=2>\xf0aa</fn>","-S", "True"] 10
+
+                    , Run Cpu ["-L","3","-H","50","-t","<fn=2>\xf135</fn> <total>%",
+                               "--normal","green","--high","red"] 10
+
+                    , Run ThermalZone 0 ["-L","45", "-H", "65",
+                                         "--low", "green", "--normal", "yellow", "--high", "red", 
+                                         "-t", "<fn=2>\xf2c9</fn> <temp>C"] 10
+
+                    , Run Memory ["-t","<fn=2>\xf2db</fn> <usedratio>%"] 10
+                    
+                    , Run Com "uname" ["-s","-r"] "" 36000
+
+                    , Run Date "%a %b %_d %Y %I:%M:%S %p" "date" 10
+
+                    , Run MPD ["-t", "<state>: <artist> - <track>","-p","6500", "-h", "127.0.1.1"] 10
+                    , Run StdinReader
+                    ]
+       , sepChar = "%"
+       , alignSep = "}{"
+       , template = "%StdinReader%} \
+                    \{%eno1% | %cpu% | %thermal0% | %memory% | <fc=#ee9a00>%date%</fc>"
+
