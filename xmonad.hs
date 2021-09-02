@@ -6,7 +6,6 @@
 --
 -- Normally, you'd only override those defaults you care about.
 --
-
 import XMonad 
 import Data.Monoid
 import System.Exit
@@ -33,6 +32,10 @@ import XMonad.Hooks.ManageDocks
 import XMonad.Hooks.DynamicLog 
 import XMonad.Hooks.EwmhDesktops
 import XMonad.Hooks.UrgencyHook
+
+-- Actions
+import XMonad.Actions.CycleWS
+
 -- Utils
 import XMonad.Util.NamedScratchpad
 import XMonad.Layout.Groups.Examples
@@ -48,6 +51,7 @@ import Data.Maybe
 import XMonad.Util.Run
 import XMonad.Util.SpawnOnce
 import XMonad.Actions.UpdatePointer
+
 -- my stuff end
 
 
@@ -192,18 +196,21 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- Previous
     , ((0, xF86XK_AudioPrev        ), spawn ("playerctl previous"))
 
+    -- seek forward
+    , ((modm, xF86XK_AudioRaiseVolume ), spawn ("~/.scripts/players.sh 3"))
+
+    -- seek backwards
+    , ((modm, xF86XK_AudioLowerVolume), spawn ("~/.scripts/players.sh 2"))
+
     -- Take SS
     , ((modm .|. shiftMask, xK_s), spawn ("flameshot gui"))
 
-    -- Toggle Border not yet
-    --, ((modm,  xK_b                ), namedScratchpadAction scratchpads "Music")
-
     -- Toggle FULL layout 
     , ((modm,   xK_f               ), sendMessage $ Toggle "Full")
-    --, ((modm,   xK_p               ), setLayout $ Xmonad.layoutHook conf)
 
+    -- Toggle screen
+    , ((mod4Mask,   xK_Tab               ), swapNextScreen )
 
-    -- experimental polybar toggle 
     ]
     
     ++
@@ -235,15 +242,16 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
     [ ((modm, button3), (\w -> focus w >> mouseMoveWindow w
                                        >> windows W.shiftMaster))
 
-    -- mod-button2, Raise the window to the top of the stack
-    , ((modm, button4), (\w -> focus w >> windows W.shiftMaster))
-
-    -- mod-button3, Set the window to floating mode and resize by dragging
+    -- mod-button2, Set the window to floating mode and resize by dragging
     , ((modm, button2), (\w -> focus w >> mouseResizeWindow w
                                        >> windows W.shiftMaster))
 
-    -- you may also bind events to the mouse scroll wheel (button4 and button5)
-    --
+    -- mod-button4, Cycle ws forward
+    , ((modm, button4), (\w -> nextWS))
+
+    -- mod-button5, Cycle ws backwards 
+    , ((modm, button5), (\w -> prevWS))
+
     ]
 
 
@@ -272,8 +280,7 @@ myLayout    = smartBorders
             ||| grid
             ) 
     where
-        full        =   avoidStruts 
-                        $ noBorders Full 
+        full        =   noBorders Full 
         tiled       =   lessBorders Screen
                         $ avoidStruts
                         $ let i=3 in gaps i 
@@ -282,10 +289,12 @@ myLayout    = smartBorders
                     ,   tallRatioIncrement = 3/100
                     ,   tallRatio = 1/2
                     }
-        twopanes    =   avoidStruts
+        twopanes    =   lessBorders Screen
+                        $ avoidStruts
                         $ let i=3 in gaps i
                         $ TwoPane (3/100) (1/2)
-        grid        =   avoidStruts
+        grid        =   lessBorders Screen
+                        $ avoidStruts
                         $ let i=3 in gaps i
                         $ Grid
 
@@ -345,7 +354,7 @@ myxmobarPP = def {
            ppCurrent = currentPP
          , ppVisible = visiblePP
          , ppHiddenNoWindows = xmobarColor "darkgreen" ""
-         , ppHidden  = xmobarColor "orange" "" . wrap "<box type=Bottom width=2 color=" ""
+         , ppHidden  = xmobarColor "orange" "" . wrap "" ""
          , ppLayout  = xmobarColor "purple"  "" . wrap "" ""
          , ppTitle   = xmobarColor "green" "" . shorten 40 . wrap "" ""
          , ppUrgent  = xmobarColor "red" ""
@@ -425,7 +434,7 @@ defaults = def {
     } 
 
 
--- | Finally, a copy of the default bindings in simple textual tabular format.
+-- | Finally, a copy of the default bindings in simple textual pabular format.
 help :: String
 help = unlines ["The default modifier key is 'alt'. Default keybindings:",
     "",
