@@ -1,8 +1,0 @@
-
-xmonad.hs:302:11: warning: [-Wdeprecations]
-    In the use of ‘defaultTheme’
-    (imported from XMonad.Layout.Groups.Examples, but defined in XMonad.Layout.Decoration):
-    Deprecated: "Use def (from Data.Default, and re-exported by XMonad.Layout.Decoration) instead."
-    |
-302 | myTheme = defaultTheme
-    |           ^^^^^^^^^^^^

@@ -6,7 +6,7 @@
 --
 -- Normally, you'd only override those defaults you care about.
 --
-import XMonad 
+import XMonad hiding ( (|||) )
 import Data.Monoid
 import System.Exit
 
@@ -15,16 +15,21 @@ import qualified Data.Map        as M
 
 -- Layouts
 import XMonad.Layout.Spacing
-import XMonad.Layout.Tabbed
 import XMonad.Layout.TwoPane
 import XMonad.Layout.Fullscreen
 import XMonad.Layout.ToggleLayouts
 import XMonad.Layout.Grid
 import XMonad.Layout.SimpleDecoration
-import XMonad.Layout.NoFrillsDecoration
 import XMonad.Layout.NoBorders
 import XMonad.Layout.CenteredMaster
 import XMonad.Layout.Tabbed
+import XMonad.Layout.LayoutCombinators
+import XMonad.Layout.SubLayouts
+import XMonad.Layout.Renamed
+import XMonad.Layout.NoFrillsDecoration
+import XMonad.Layout.Circle
+import XMonad.Layout.WindowNavigation
+import XMonad.Layout.Simplest
 
 --Hooks
 
@@ -35,9 +40,14 @@ import XMonad.Hooks.UrgencyHook
 
 -- Actions
 import XMonad.Actions.CycleWS
+import XMonad.Actions.RotSlaves
 
 -- Utils
 import XMonad.Util.NamedScratchpad
+
+
+
+
 import XMonad.Layout.Groups.Examples
 import XMonad.Prompt.Shell
 import XMonad.Prompt
@@ -73,11 +83,7 @@ myClickJustFocuses :: Bool
 myClickJustFocuses = False
 
 -- Width of the window border in pixels.
-myBorderWidth   = 1
--- modMask lets you specify which modkey you want to use. The default
--- is mod1Mask ("left alt").  You may also consider using mod3Mask
--- ("right alt"), which does not conflict with emacs keybindings. The
--- "windows key" is usually mod4Mask.
+myBorderWidth   = 2
 --
 myModMask       = mod1Mask
 --myModMask = mod4Mask
@@ -95,9 +101,10 @@ myWorkspaces    = ["1","2","3","4","5","6","7","8","卑"]
 
 -- Border colors for unfocused and focused windows, respectively.
 --
-myNormalBorderColor  = "#5f676a"
+--myNormalBorderColor  = "#5f676a"
+myNormalBorderColor  = "#0f1126"
 --myFocusedBorderColor = "#44bcd8"
-myFocusedBorderColor = "green"
+myFocusedBorderColor = "orange"
 
 ------------------------------------------------------------------------
 -- Key bindings. Add, modify or remove key bindings here.
@@ -107,11 +114,8 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- launch a terminal
     [ ((modm,  xK_Return), spawn $ XMonad.terminal conf)
 
-    -- launch dmenu
+    -- launch rofi
     , ((modm,               xK_d     ), spawn "rofi -show run")
-
-    -- launch gmrun
-    --, ((modm .|. shiftMask, xK_p     ), )
 
     -- close focused window
     , ((modm .|. shiftMask, xK_c     ), kill)
@@ -161,13 +165,9 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- Deincrement the number of windows in the master area
     , ((modm              , xK_period), sendMessage (IncMasterN (-1)))
 
-    -- Toggle the status bar gap
-    -- Use this binding with avoidStruts from Hooks.ManageDocks.
-    -- See also the statusBar function from Hooks.DynamicLog.
-    , ((modm .|. shiftMask, xK_space), sendMessage ToggleStruts)
-
-    -- Quit xmonad
-    --, (modm .|. shiftMask, xK_q     ), confirmPrompt def "exit" $ io (exitWith ExitSuccess))
+    -- Exit Xmonad
+    , ((modm .|. shiftMask, xK_q     ), io (exitWith ExitSuccess))
+ 
 
     -- Restart xmonad
     , ((modm              , xK_q     ), spawn "xmonad --recompile; xmonad --restart")
@@ -187,8 +187,8 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     --Play and pause
     , ((0, xF86XK_AudioPlay        ), spawn ("~/.scripts/players.sh"))
 
-    --Pause
-    , ((0, xF86XK_AudioStop        ), spawn ("~/.scripts/players.sh 1"))
+  --Pause
+  , ((0, xF86XK_AudioStop        ), spawn ("~/.scripts/players.sh 1"))
 
     -- next
     , ((0, xF86XK_AudioNext        ), spawn ("playerctl next"))
@@ -205,11 +205,63 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- Take SS
     , ((modm .|. shiftMask, xK_s), spawn ("flameshot gui"))
 
-    -- Toggle FULL layout 
-    , ((modm,   xK_f               ), sendMessage $ Toggle "Full")
+--------------------------------------------------------------------------------
+-- Layout Section
+
+-- Go to layout
+    -- Toggle Full layout 
+    , ((modm,   xK_f),  sendMessage $ ToggleLayout)
+
+    -- Go to Grid
+    , ((modm, xK_g),    sendMessage $ JumpToLayout "Spacing Grid") 
+    
+    -- Go to tiled 
+    , ((modm, xK_s),    sendMessage $ JumpToLayout "Super Tall") 
+
+-- Group Layout Keybinds 
+    
+    -- Pull into group
+    , ((modm .|. controlMask, xK_h), sendMessage $ pullGroup L)
+    , ((modm .|. controlMask, xK_l), sendMessage $ pullGroup R)
+    , ((modm .|. controlMask, xK_k), sendMessage $ pullGroup U)
+    , ((modm .|. controlMask, xK_j), sendMessage $ pullGroup D)
+
+    -- Merge all windows into group and remove window from group
+    , ((modm .|. controlMask, xK_m), withFocused (sendMessage . MergeAll))
+    , ((modm .|. controlMask, xK_u), withFocused (sendMessage . UnMerge))
+
+    -- navigate group
+    , ((modm .|. controlMask, xK_period), onGroup W.focusUp')
+    , ((modm .|. controlMask, xK_comma), onGroup W.focusDown')
+
+    -- Switch SubLayout's Layout
+    , ((modm .|. controlMask, xK_space), toSubl NextLayout)
+
+-- Window navigation (ignores group's inner windows)
+    , ((modm,                 xK_Right), sendMessage $ Go R)
+    , ((modm,                 xK_Left ), sendMessage $ Go L)
+    , ((modm,                 xK_Up   ), sendMessage $ Go U)
+    , ((modm,                 xK_Down ), sendMessage $ Go D)
+    , ((modm .|. controlMask, xK_Right), sendMessage $ Swap R)
+    , ((modm .|. controlMask, xK_Left ), sendMessage $ Swap L)
+    , ((modm .|. controlMask, xK_Up   ), sendMessage $ Swap U)
+    , ((modm .|. controlMask, xK_Down ), sendMessage $ Swap D)
+
+-- Layout
+    , ((modm .|. controlMask, xK_period), rotSlavesUp)
+
+--------------------------------------------------------------------------------
+-- 
+    -- Toggle the status bar gap
+    , ((modm .|. shiftMask, xK_space), sendMessage ToggleStruts)
 
     -- Toggle screen
-    , ((mod4Mask,   xK_Tab               ), swapNextScreen )
+    , ((mod4Mask,   xK_Tab          ), swapNextScreen   )
+
+    -- Launch file manager
+    , ((mod4Mask,   xK_e            ), spawn "nemo"   )
+
+
 
     ]
     
@@ -246,11 +298,11 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm, button2), (\w -> focus w >> mouseResizeWindow w
                                        >> windows W.shiftMaster))
 
-    -- mod-button4, Cycle ws forward
-    , ((modm, button4), (\w -> nextWS))
+    -- mod-button5, Cycle ws backwards
+    , ((modm, button5), \w -> moveTo Next HiddenWS )
 
-    -- mod-button5, Cycle ws backwards 
-    , ((modm, button5), (\w -> prevWS))
+    -- mod-button5, Cycle ws forward
+    , ((modm, button4), \w -> moveTo Prev HiddenWS )
 
     ]
 
@@ -258,7 +310,7 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 
 
 
-------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 -- Layouts:
 
 -- You can specify and transform your layouts by modifying these values.
@@ -268,43 +320,50 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 --
 -- The available layouts.  Note that each layout is separated by |||,
 -- which denotes layout choice.
-i :: Integer
-i = 3
 
 gaps i = spacingRaw True (Border i i i i) True (Border i i i i) True 
 
-myLayout    = smartBorders 
-            $ toggleLayouts full 
-            (   tiled 
-            ||| twopanes 
+myLayout  = toggleLayouts full 
+            (   
+            smartBorders 
+                tiled2 
+            ||| twopanes
             ||| grid
+            ||| circle
             ) 
-    where
-        full        =   noBorders Full 
-        tiled       =   lessBorders Screen
-                        $ avoidStruts
-                        $ let i=3 in gaps i 
-                        $ Tall {
-                        tallNMaster = 1
-                    ,   tallRatioIncrement = 3/100
-                    ,   tallRatio = 1/2
-                    }
-        twopanes    =   lessBorders Screen
-                        $ avoidStruts
-                        $ let i=3 in gaps i
-                        $ TwoPane (3/100) (1/2)
-        grid        =   lessBorders Screen
-                        $ avoidStruts
-                        $ let i=3 in gaps i
-                        $ Grid
+
+full      = noBorders Full 
+
+twopanes  = lessBorders Screen
+            $ avoidStruts 
+            $ gaps 3
+            $ TwoPane (3/100) (1/2)
+            
+grid      = lessBorders Screen
+            $ avoidStruts
+            $ windowNavigation
+            $ gaps 3
+              Grid 
+
+tiled2      = renamed [Replace "Super Tall"] 
+            $ lessBorders Screen
+            $ avoidStruts 
+            $ windowNavigation 
+            $ addTabs shrinkText myTheme
+            $ subLayout [] (Simplest ||| Circle)
+            $ gaps 3 $ Tall 1 (3/100) (1/2) 
 
 
-myTheme = defaultTheme
-    { fontName = "xft:JetBrainsMono:pixelsize=10"
-    }
------
---scratchpads = [
-    --NS "Music" "mpdevil" (className =? "mpdevil") nonFloating]
+circle      = avoidStruts
+            $ Circle
+
+myTheme :: Theme
+myTheme = def { activeColor         = myFocusedBorderColor
+              , activeBorderColor   = myFocusedBorderColor 
+              , inactiveColor       = myNormalBorderColor
+              , inactiveBorderColor = myNormalBorderColor
+              , fontName            = "xft:JetBrainsMono:pixelsize=10"
+              }
 
 ------------------------------------------------------------------------
 -- Window rules:
@@ -374,7 +433,7 @@ myLogHook = do
     dynamicLogWithPP $ myxmobarPP {ppOutput = maybe (\x -> return()) hPutStrLn a}
     b <- getNamedPipe "xmobarsec"
     dynamicLogWithPP $ myxmobarPP { ppOutput = maybe (\x -> return()) hPutStrLn b
-                                  , ppOrder = \(a:b:c:_) -> [a,b,c]
+                                  , ppOrder = id
                                   } 
 
 
