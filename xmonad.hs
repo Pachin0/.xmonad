@@ -15,6 +15,7 @@ import qualified Data.Map        as M
 
 -- Layouts
 import XMonad.Layout.Spacing
+import qualified XMonad.Layout.Gaps as G
 import XMonad.Layout.TwoPane
 import XMonad.Layout.Fullscreen
 import XMonad.Layout.ToggleLayouts
@@ -62,16 +63,12 @@ import XMonad.Util.Run
 import XMonad.Util.SpawnOnce
 import XMonad.Actions.UpdatePointer
 
--- my stuff end
 
-
-
-
+--------------------------------------------------------------------------------
+-- Variables
 
 -- The preferred terminal program, which is used in a binding below and by
 -- certain contrib modules.
---
---myTerminal      = "kitty"
 myTerminal      = "st"
 
 -- Whether focus follows the mouse pointer.
@@ -237,6 +234,9 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- Switch SubLayout's Layout
     , ((modm .|. controlMask, xK_space), toSubl NextLayout)
 
+    -- Rotate subgroup's slave windows
+    , ((modm .|. controlMask, xK_period), rotSlavesUp)
+
 -- Window navigation (ignores group's inner windows)
     , ((modm,                 xK_Right), sendMessage $ Go R)
     , ((modm,                 xK_Left ), sendMessage $ Go L)
@@ -247,8 +247,9 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm .|. controlMask, xK_Up   ), sendMessage $ Swap U)
     , ((modm .|. controlMask, xK_Down ), sendMessage $ Swap D)
 
--- Layout
-    , ((modm .|. controlMask, xK_period), rotSlavesUp)
+-- ScratchPads
+    , ((modm .|. shiftMask, xK_Tab), namedScratchpadAction scratchpads "Utilities")
+
 
 --------------------------------------------------------------------------------
 -- 
@@ -322,6 +323,7 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 -- which denotes layout choice.
 
 gaps i = spacingRaw True (Border i i i i) True (Border i i i i) True 
+gaps2  = G.gaps [(U,12),(D,12),(L,12),(R,12)]
 
 myLayout  = toggleLayouts full 
             (   
@@ -354,8 +356,9 @@ tiled2      = renamed [Replace "Super Tall"]
             $ gaps 3 $ Tall 1 (3/100) (1/2) 
 
 
-circle      = avoidStruts
-            $ Circle
+circle      = windowNavigation 
+            $ lessBorders Screen
+            $ avoidStruts Circle
 
 myTheme :: Theme
 myTheme = def { activeColor         = myFocusedBorderColor
@@ -364,6 +367,14 @@ myTheme = def { activeColor         = myFocusedBorderColor
               , inactiveBorderColor = myNormalBorderColor
               , fontName            = "xft:JetBrainsMono:pixelsize=10"
               }
+
+--------------------------------------------------------------------------------
+-- ScratchPads
+--
+scratchpads = [
+    NS "Utilities" "mpdevil" (className =? "Mpdevil") defaultFloating 
+  ]
+
 
 ------------------------------------------------------------------------
 -- Window rules:
@@ -383,14 +394,13 @@ myTheme = def { activeColor         = myFocusedBorderColor
 myManageHook = composeAll
     [ className =? "MPlayer"        --> doFloat
     , className =? "Gimp"           --> doFloat
-    , className =? "Steam"          --> doFloat
+    , title     =? "Steam"          --> doFloat
     , className =? "Mumble"         --> doFloat
     , className =? "Terraria.bin.x86_64" --> hasBorder False
-    , className =? "firefox"        --> hasBorder False
-    , className =? "mpdevil"        --> hasBorder False
+    --, className =? "firefox"        --> hasBorder False
     , resource  =? "desktop_window" --> doIgnore
-    , resource  =? "kdesktop"       --> doIgnore ]
-
+    , resource  =? "kdesktop"       --> doIgnore ] 
+    >> namedScratchpadManageHook scratchpads
 
 ------------------------------------------------------------------------
 -- Event handling
@@ -420,12 +430,12 @@ myxmobarPP = def {
          , ppSep     = "   "
          } 
     where
-        currentPP :: WorkspaceId -> String
-        currentPP x = xmobarColor "#44bcd8" "" 
-                    $ "<box type=Bottom width=2 color=#44bcd8><fn=3>ﬦ</fn>" ++ x ++"</box>"
-        visiblePP :: WorkspaceId -> String
-        visiblePP x = xmobarColor "yellow" "" 
-                    $ "<box type=Bottom width=2 color=#FFFF00><fn=3>\xf52a</fn>" ++ x ++ "</box>"
+      currentPP :: WorkspaceId -> String
+      currentPP x = xmobarColor "#44bcd8" "" 
+                  $ "<box type=Bottom width=2 color=#44bcd8><fn=3>ﬦ</fn>" ++ x ++"</box>"
+      visiblePP :: WorkspaceId -> String
+      visiblePP x = xmobarColor "yellow" "" 
+                  $ "<box type=Bottom width=2 color=#FFFF00><fn=3>\xf52a</fn>" ++ x ++ "</box>"
 
 myLogHook = do 
     updatePointer (0.5, 0.5) (0,0) 
@@ -450,7 +460,6 @@ myStartupHook = do
     spawnNamedPipe "xmobar ~/.xmonad/xmobars/xmobar2" "xmobarsec"
     spawn "/usr/bin/trayer --edge top --align left --SetDockType true --SetPartialStrut true --expand true --widthtype request --transparent true --alpha 50 --tint 000000 --height 19 --monitor primary"
     spawn "xss-lock ~/.scripts/lock.sh"
-
 
 
 
