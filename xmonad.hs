@@ -15,7 +15,6 @@ import qualified Data.Map        as M
 
 -- Layouts
 import XMonad.Layout.Spacing
-import qualified XMonad.Layout.Gaps as G
 import XMonad.Layout.TwoPane
 import XMonad.Layout.Fullscreen
 import XMonad.Layout.ToggleLayouts
@@ -31,6 +30,8 @@ import XMonad.Layout.NoFrillsDecoration
 import XMonad.Layout.Circle
 import XMonad.Layout.WindowNavigation
 import XMonad.Layout.Simplest
+import XMonad.Layout.LayoutHints
+
 
 --Hooks
 
@@ -98,8 +99,8 @@ myWorkspaces    = ["1","2","3","4","5","6","7","8","卑"]
 
 -- Border colors for unfocused and focused windows, respectively.
 --
---myNormalBorderColor  = "#5f676a"
-myNormalBorderColor  = "#0f1126"
+myNormalBorderColor  = "#5f676a"
+--myNormalBorderColor  = "#0f1126"
 --myFocusedBorderColor = "#44bcd8"
 myFocusedBorderColor = "orange"
 
@@ -163,7 +164,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm              , xK_period), sendMessage (IncMasterN (-1)))
 
     -- Exit Xmonad
-    , ((modm .|. shiftMask, xK_q     ), io (exitWith ExitSuccess))
+    --, ((modm .|. shiftMask, xK_q     ), io (exitWith ExitSuccess))
  
 
     -- Restart xmonad
@@ -184,7 +185,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     --Play and pause
     , ((0, xF86XK_AudioPlay        ), spawn ("~/.scripts/players.sh"))
 
-  --Pause
+    --Pause
   , ((0, xF86XK_AudioStop        ), spawn ("~/.scripts/players.sh 1"))
 
     -- next
@@ -201,6 +202,8 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
     -- Take SS
     , ((modm .|. shiftMask, xK_s), spawn ("flameshot gui"))
+    
+    , ((modm, xK_b), withFocused toggleBorder)
 
 --------------------------------------------------------------------------------
 -- Layout Section
@@ -235,7 +238,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm .|. controlMask, xK_space), toSubl NextLayout)
 
     -- Rotate subgroup's slave windows
-    , ((modm .|. controlMask, xK_period), rotSlavesUp)
+    , ((modm .|. controlMask, xK_period), rotAllUp) 
 
 -- Window navigation (ignores group's inner windows)
     , ((modm,                 xK_Right), sendMessage $ Go R)
@@ -252,6 +255,12 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
 
 --------------------------------------------------------------------------------
+-- Program Keybinds 
+
+    -- Launch file manager
+    , ((mod4Mask,   xK_e            ), spawn "nemo"   )
+    
+--------------------------------------------------------------------------------
 -- 
     -- Toggle the status bar gap
     , ((modm .|. shiftMask, xK_space), sendMessage ToggleStruts)
@@ -259,8 +268,6 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- Toggle screen
     , ((mod4Mask,   xK_Tab          ), swapNextScreen   )
 
-    -- Launch file manager
-    , ((mod4Mask,   xK_e            ), spawn "nemo"   )
 
 
 
@@ -323,7 +330,6 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 -- which denotes layout choice.
 
 gaps i = spacingRaw True (Border i i i i) True (Border i i i i) True 
-gaps2  = G.gaps [(U,12),(D,12),(L,12),(R,12)]
 
 myLayout  = toggleLayouts full 
             (   
@@ -397,10 +403,9 @@ myManageHook = composeAll
     , title     =? "Steam"          --> doFloat
     , className =? "Mumble"         --> doFloat
     , className =? "Terraria.bin.x86_64" --> hasBorder False
-    --, className =? "firefox"        --> hasBorder False
     , resource  =? "desktop_window" --> doIgnore
     , resource  =? "kdesktop"       --> doIgnore ] 
-    >> namedScratchpadManageHook scratchpads
+      >> namedScratchpadManageHook scratchpads
 
 ------------------------------------------------------------------------
 -- Event handling
@@ -411,7 +416,7 @@ myManageHook = composeAll
 -- return (All True) if the default handler is to be run afterwards. To
 -- combine event hooks use mappend or mconcat from Data.Monoid.
 --
-myEventHook = mempty
+myEventHook = hintsEventHook
 
 ------------------------------------------------------------------------
 -- Status bars and logging
@@ -459,7 +464,7 @@ myStartupHook = do
     spawnNamedPipe "xmobar ~/.xmonad/xmobars/xmobar1" "xmobarmain"
     spawnNamedPipe "xmobar ~/.xmonad/xmobars/xmobar2" "xmobarsec"
     spawn "/usr/bin/trayer --edge top --align left --SetDockType true --SetPartialStrut true --expand true --widthtype request --transparent true --alpha 50 --tint 000000 --height 19 --monitor primary"
-    spawn "xss-lock ~/.scripts/lock.sh"
+    --spawn "xss-lock ~/.scripts/lock.sh"
 
 
 
