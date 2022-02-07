@@ -33,12 +33,14 @@ import XMonad.Layout.Simplest
 import XMonad.Layout.LayoutHints
 
 
+
 --Hooks
 
 import XMonad.Hooks.ManageDocks
 import XMonad.Hooks.DynamicLog 
 import XMonad.Hooks.EwmhDesktops
 import XMonad.Hooks.UrgencyHook
+import XMonad.Hooks.FadeInactive
 
 -- Actions
 import XMonad.Actions.CycleWS
@@ -258,7 +260,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 -- Program Keybinds 
 
     -- Launch file manager
-    , ((mod4Mask,   xK_e            ), spawn "nemo"   )
+    , ((mod4Mask,   xK_e            ), spawn "emacsclient -nc ."   )
     
 --------------------------------------------------------------------------------
 -- 
@@ -449,7 +451,8 @@ myLogHook = do
     b <- getNamedPipe "xmobarsec"
     dynamicLogWithPP $ myxmobarPP { ppOutput = maybe (\x -> return()) hPutStrLn b
                                   , ppOrder = id
-                                  } 
+                                  }
+    -- fadeInactiveLogHook 0.8
 
 
 ------------------------------------------------------------------------
@@ -476,6 +479,7 @@ myStartupHook = do
 -- Run xmonad with the settings you specify. No need to modify this.
 --
 main = xmonad $ ewmh $ docks $ withUrgencyHook NoUrgencyHook $ defaults
+-- main = xmonad $ ewmh $ docks $ defaults
 
 -- A structure containing your configuration settings, overriding
 -- fields in the default config. Any you don't override, will
