@@ -16,6 +16,8 @@ import qualified Data.Map        as M
 -- Layouts
 import XMonad.Layout.Spacing
 import XMonad.Layout.TwoPane
+
+
 import XMonad.Layout.Fullscreen
 import XMonad.Layout.ToggleLayouts
 import XMonad.Layout.Grid
@@ -48,8 +50,6 @@ import XMonad.Actions.RotSlaves
 
 -- Utils
 import XMonad.Util.NamedScratchpad
-
-
 
 
 import XMonad.Layout.Groups.Examples
@@ -86,6 +86,7 @@ myClickJustFocuses = False
 myBorderWidth   = 2
 --
 myModMask       = mod1Mask
+windowsKey = mod4Mask
 --myModMask = mod4Mask
 
 -- The default number of workspaces (virtual screens) and their names.
@@ -101,10 +102,13 @@ myWorkspaces    = ["1","2","3","4","5","6","7","8","卑"]
 
 -- Border colors for unfocused and focused windows, respectively.
 --
-myNormalBorderColor  = "#5f676a"
 --myNormalBorderColor  = "#0f1126"
 --myFocusedBorderColor = "#44bcd8"
-myFocusedBorderColor = "orange"
+myFocusedBorderColor = "#0a84ff"
+myNormalBorderColor  = "#5f676a"
+
+
+
 
 ------------------------------------------------------------------------
 -- Key bindings. Add, modify or remove key bindings here.
@@ -167,7 +171,6 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
     -- Exit Xmonad
     --, ((modm .|. shiftMask, xK_q     ), io (exitWith ExitSuccess))
- 
 
     -- Restart xmonad
     , ((modm              , xK_q     ), spawn "xmonad --recompile; xmonad --restart")
@@ -255,45 +258,43 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 -- ScratchPads
     , ((modm .|. shiftMask, xK_Tab), namedScratchpadAction scratchpads "Utilities")
 
+--------------------------------------------------------------------------------
+-- Grid Select
 
+-- Pull Window Into Workspace
+    , ((modm .|. shiftMask, xK_u), bringSelected def )
+    
 --------------------------------------------------------------------------------
 -- Program Keybinds 
 
-    -- Launch file manager
-    , ((mod4Mask,   xK_e            ), spawn "emacsclient -nc ."   )
+    -- Launch the file manager
+    , ((windowsKey .|. shiftMask, xK_e), spawn "emacsclient -nc ."   )
+    -- Launch Emacs
+    , ((windowsKey,   xK_e ), spawn "emacsclient -nc"   )
     
 --------------------------------------------------------------------------------
--- 
     -- Toggle the status bar gap
     , ((modm .|. shiftMask, xK_space), sendMessage ToggleStruts)
 
     -- Toggle screen
-    , ((mod4Mask,   xK_Tab          ), swapNextScreen   )
-
-
-
-
+    , ((windowsKey,   xK_Tab          ), swapNextScreen   )
     ]
-    
-    ++
+    ++ workspaceBinds conf
+    ++ xineramaSwitch conf
 
-    --
-    -- mod-[1..9], Switch to workspace N
-    -- mod-shift-[1..9], Move client to workspace N
-    --
-    [((m .|. modm, k), windows $ f i)
-        | (i, k) <- zip (XMonad.workspaces conf) [xK_1 .. xK_9]
-        , (f, m) <- [(W.greedyView, 0), (W.shift, shiftMask)]]
-    ++
+-- | 0-9-modm switch workspace 
+-- 0-9-modm-shift shift window to workspace
+workspaceBinds :: XConfig Layout -> [((KeyMask, KeySym), X()) ]
+workspaceBinds conf = [((m .|. mod1Mask, k), f i)
+                          | (i, k) <- zip (XMonad.workspaces conf) [xK_1 .. xK_9]
+                          , (f, m) <- [(toggleOrView, 0), (windows . W.shift , shiftMask)]]
 
-    --
-    -- mod-{w,e,r}, Switch to physical/Xinerama screens 1, 2, or 3
-    -- mod-shift-{w,e,r}, Move client to screen 1, 2, or 3
-    --
-    [((m .|. modm, key), screenWorkspace sc >>= flip whenJust (windows . f))
-        | (key, sc) <- zip [xK_w, xK_e, xK_r] [0..]
-        , (f, m) <- [(W.view, 0), (W.shift, shiftMask)]]
-
+-- mod-{w,e,r}, Switch to physical/Xinerama screens 1, 2, or 3
+-- mod-shift-{w,e,r}, Move client to screen 1, 2, or 3
+xineramaSwitch :: XConfig Layout -> [((KeyMask, KeySym), X()) ]
+xineramaSwitch conf = [((m .|. XMonad.modMask conf, key), screenWorkspace sc >>= flip whenJust (windows . f))
+                 | (key, sc) <- zip [xK_w, xK_e, xK_r] [0..]
+                 , (f, m) <- [(W.view, 0), (W.shift, shiftMask)]]
 
 ------------------------------------------------------------------------
 -- Mouse bindings: default actions bound to mouse events
@@ -316,10 +317,6 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 
     ]
 
-
-
-
-
 -------------------------------------------------------------------------------
 -- Layouts:
 
@@ -337,7 +334,7 @@ myLayout  = toggleLayouts full
             (   
             smartBorders 
                 tiled2 
-            ||| twopanes
+            ||| twopanes 
             ||| grid
             ||| circle
             ) 
@@ -345,10 +342,10 @@ myLayout  = toggleLayouts full
 full      = noBorders Full 
 
 twopanes  = lessBorders Screen
-            $ avoidStruts 
+            $ avoidStruts
             $ gaps 3
             $ TwoPane (3/100) (1/2)
-            
+
 grid      = lessBorders Screen
             $ avoidStruts
             $ windowNavigation
@@ -487,27 +484,26 @@ main = xmonad $ ewmh $ docks $ withUrgencyHook NoUrgencyHook $ defaults
 --
 -- No need to modify this.
 
-defaults = def {
+defaults = def
+  {
       -- simple stuff
-        terminal           = myTerminal,
-        focusFollowsMouse  = myFocusFollowsMouse,
-        clickJustFocuses   = myClickJustFocuses,
-        borderWidth        = myBorderWidth,
-        modMask            = myModMask,
-        workspaces         = myWorkspaces,
-        normalBorderColor  = myNormalBorderColor,
-        focusedBorderColor = myFocusedBorderColor,
-
-      -- key bindings
-        keys               = myKeys,
-        mouseBindings      = myMouseBindings,
-
-      -- hooks, layouts
-        layoutHook         = myLayout,
-        manageHook         = myManageHook,
-        handleEventHook    = myEventHook,
-        logHook            = myLogHook, 
-        startupHook        = myStartupHook
+    terminal           = myTerminal
+  , focusFollowsMouse  = myFocusFollowsMouse
+  , clickJustFocuses   = myClickJustFocuses
+  , borderWidth        = myBorderWidth
+  , modMask            = myModMask
+  , workspaces         = myWorkspaces
+  , normalBorderColor  = myNormalBorderColor
+  , focusedBorderColor = myFocusedBorderColor
+    -- key bindings
+  , keys               = myKeys  
+  , mouseBindings      = myMouseBindings
+    -- hooks, layouts
+  , layoutHook         = myLayout
+  , manageHook         = myManageHook
+  , handleEventHook    = myEventHook
+  , logHook            = myLogHook
+  , startupHook        = myStartupHook
     } 
 
 
@@ -561,5 +557,3 @@ help = unlines ["The default modifier key is 'alt'. Default keybindings:",
     "mod-button1  Set the window to floating mode and move by dragging",
     "mod-button2  Raise the window to the top of the stack",
     "mod-button3  Set the window to floating mode and resize by dragging"]
-
-
